@@ -2,21 +2,47 @@
 
 This document explains how to set up Continuous Deployment (CD) from GitHub to Google Kubernetes Engine (GKE).
 
+⚠️ **Important**: The deployment workflows expect GKE clusters to already exist. They do NOT create clusters automatically. You must complete the initial setup below before deployments will work.
+
 ## Prerequisites
 
 1. **Google Cloud Project** with billing enabled
-2. **GKE clusters** created for staging and production
-3. **Service Account** with deployment permissions
-4. **GitHub repository** with appropriate secrets configured
+2. **Required APIs enabled** (see Initial GCP Setup below)
+3. **GKE clusters created** for staging and production (required - see step 2 below)
+4. **Service Account** with deployment permissions
+5. **GitHub repository** with appropriate secrets configured
 
 ## Initial GCP Setup
 
-### 1. Create GKE Clusters
+### 1. Enable Required APIs
 
 ```bash
 # Set your project ID
 export GCP_PROJECT_ID="your-project-id"
 
+# Enable all required APIs (may take a few minutes)
+gcloud services enable \
+  container.googleapis.com \
+  storage.googleapis.com \
+  artifactregistry.googleapis.com \
+  containerregistry.googleapis.com \
+  compute.googleapis.com \
+  cloudresourcemanager.googleapis.com \
+  --project=$GCP_PROJECT_ID
+
+# Verify APIs are enabled
+gcloud services list --enabled --filter="name:(container.googleapis.com OR storage.googleapis.com)" --project=$GCP_PROJECT_ID
+```
+
+**Note**: If the Google Cloud Console shows errors, use the command line instead. API enablement can take 2-5 minutes to propagate.
+
+### 2. Create GKE Clusters
+
+**🚨 REQUIRED**: You must create these clusters before running any deployments. The GitHub Actions workflows expect them to exist.
+
+**Important**: Wait 2-5 minutes after enabling APIs before creating clusters.
+
+```bash
 # Create staging cluster
 gcloud container clusters create ipfs-gcs-staging \
   --zone us-central1-a \
@@ -37,9 +63,23 @@ gcloud container clusters create ipfs-gcs-prod \
   --max-nodes 10 \
   --machine-type e2-standard-2 \
   --project $GCP_PROJECT_ID
+
+# Verify clusters are created
+gcloud container clusters list --project $GCP_PROJECT_ID
 ```
 
-### 2. Create Service Account for GitHub Actions
+**Troubleshooting**: If you get "API not enabled" errors:
+1. Double-check APIs are enabled: `gcloud services list --enabled --project=$GCP_PROJECT_ID`
+2. Wait a few more minutes and retry
+3. Ensure your project has billing enabled
+
+If working with GKE locally, you may need the auth plugin:
+```bash
+gcloud components install gke-gcloud-auth-plugin
+export USE_GKE_GCLOUD_AUTH_PLUGIN=True
+```
+
+### 3. Create Service Account for GitHub Actions
 
 ```bash
 # Create service account
@@ -63,7 +103,7 @@ gcloud iam service-accounts keys create github-actions-key.json \
   --project $GCP_PROJECT_ID
 ```
 
-### 3. Configure GitHub Secrets
+### 4. Configure GitHub Secrets
 
 Go to your GitHub repository → Settings → Secrets and variables → Actions, and add:
 
@@ -73,7 +113,7 @@ Go to your GitHub repository → Settings → Secrets and variables → Actions,
 | `GCP_SA_KEY` | (contents of github-actions-key.json) | Service account key JSON |
 | `GKE_ZONE` | us-central1-a | Zone where your clusters are located |
 
-### 4. Set up GitHub Environments
+### 5. Set up GitHub Environments
 
 1. Go to Settings → Environments
 2. Create two environments: `staging` and `production`

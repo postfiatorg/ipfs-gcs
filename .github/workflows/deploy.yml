@@ -51,6 +51,11 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
 
+    - name: Install GKE auth plugin
+      run: |
+        gcloud components install gke-gcloud-auth-plugin
+        echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+
     - name: Configure Docker for GCR
       run: gcloud auth configure-docker
 
@@ -69,7 +74,7 @@ jobs:
 
     - name: Create namespace if it doesn't exist
       run: |
-        kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+        kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f - || kubectl create namespace ${{ env.NAMESPACE }}
 
     - name: Deploy to Kubernetes
       run: |
