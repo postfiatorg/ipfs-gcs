@@ -95,11 +95,11 @@ jobs:
         cd k8s
         sed -i "s|your-registry/ipfs-gcs-example:latest|${{ env.IMAGE }}|g" deployment.yaml
         
-        # Apply manifests
+        # Apply manifests (skip HPA temporarily to prevent scaling issues)
         kubectl apply -f configmap.yaml -n ${{ env.NAMESPACE }}
         kubectl apply -f deployment.yaml -n ${{ env.NAMESPACE }}
         kubectl apply -f service.yaml -n ${{ env.NAMESPACE }}
-        kubectl apply -f hpa.yaml -n ${{ env.NAMESPACE }}
+        # kubectl apply -f hpa.yaml -n ${{ env.NAMESPACE }}  # Disabled temporarily
 
     - name: Wait for deployment
       run: |
