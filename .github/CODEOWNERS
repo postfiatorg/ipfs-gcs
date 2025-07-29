@@ -1,0 +1,10 @@
+# Global owners
+* @allenday
+
+# Kubernetes configurations
+k8s/ @allenday
+
+# Docker and CI
+Dockerfile @allenday
+.github/ @allenday
+Makefile @allenday

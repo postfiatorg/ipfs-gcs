@@ -1,5 +1,8 @@
 # ipfs-gcs-example
 
+[![CI](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/ci.yml/badge.svg)](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/ci.yml)
+[![Docker](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/docker.yml/badge.svg)](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/docker.yml)
+
 IPFS implementation with Google Cloud Storage backend using Helia, Express.js, and Docker.
 
 ## Features
@@ -69,7 +72,25 @@ The application uses:
 
 All uploaded files are content-addressed using IPFS and stored as blocks in your GCS bucket under the `blocks/` prefix.
 
-## Documentation
+## Development
+
+### Quick Commands
+
+```bash
+# Show all available commands
+make help
+
+# Start development environment
+make dev
+
+# Run full CI pipeline locally
+make ci
+
+# Build and test Docker image
+make docker-build docker-test
+```
+
+### Documentation
 
 - [Development Guide](DEVELOPMENT.md) - Local setup, debugging, architecture details
 - [Production Guide](PRODUCTION.md) - Kubernetes deployment, scaling, monitoring
