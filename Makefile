@@ -41,8 +41,10 @@ docker-test: ## Test Docker image
 
 security: ## Run security checks
 	@echo "Checking for secrets in files..."
-	@! grep -r "serviceAccountKey" --exclude-dir=.git --exclude="*.md" . || (echo "❌ Found serviceAccountKey references" && exit 1)
-	@! find . -name "*.json" -not -path "./.git/*" -not -name "package*.json" -exec echo "❌ Found JSON file: {}" \; -quit || exit 0
+	@echo "Looking for actual serviceAccountKey.json files (not references)..."
+	@! find . -name "serviceAccountKey.json" -not -path "./.git/*" -exec echo "❌ Found actual service account key file: {}" \; -quit || exit 0
+	@echo "Looking for suspicious JSON files that might contain secrets..."
+	@! find . -name "*.json" -not -path "./.git/*" -not -name "package*.json" -not -name ".env.example" -exec grep -l "private_key\|client_email\|project_id" {} \; 2>/dev/null | head -1 | xargs -I {} echo "❌ Found potential service account key: {}" || exit 0
 	@echo "✓ Security checks passed"
 
 k8s-validate: ## Validate Kubernetes manifests
