@@ -91,6 +91,14 @@ make ci
 # Build and test Docker image
 make docker-build docker-test
 
+# Get deployed environment URLs
+make get-staging-url
+make get-prod-url
+
+# Run smoke tests against deployed environments
+make smoke-test-staging
+make smoke-test-prod
+
 # Set up branch protection (one-time setup)
 make setup-branch-protection
 ```

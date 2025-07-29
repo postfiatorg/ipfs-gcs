@@ -101,6 +101,19 @@ dev-build: ## Rebuild and start development environment
 logs: ## Show application logs
 	docker compose logs -f
 
+# Environment access and testing
+get-staging-url: ## Get staging environment URL and test endpoints
+	@./scripts/get-staging-url.sh
+
+get-prod-url: ## Get production environment URL and test endpoints
+	@./scripts/get-prod-url.sh
+
+smoke-test-staging: ## Run smoke tests against staging environment
+	@./scripts/smoke-test-staging.sh
+
+smoke-test-prod: ## Run smoke tests against production environment
+	@./scripts/smoke-test-prod.sh
+
 # Repository management
 setup-branch-protection: ## Set up branch protection for main branch (requires GitHub CLI)
 	@./scripts/setup-branch-protection.sh
