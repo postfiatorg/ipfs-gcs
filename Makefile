@@ -8,6 +8,9 @@ help: ## Show this help message
 install: ## Install dependencies
 	npm ci
 
+create-buckets: ## Create GCS buckets for staging and production
+	@./scripts/create-buckets.sh
+
 test: ## Run tests including local smoke tests if staging is accessible
 	@echo "Running tests..."
 	@echo "Testing local builds work..."

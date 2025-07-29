@@ -74,6 +74,14 @@ The application uses:
 
 All uploaded files are content-addressed using IPFS and stored as blocks in your GCS bucket under the `blocks/` prefix.
 
+### Environment Isolation
+
+The application uses separate GCS buckets for each environment:
+- **Staging**: `${PROJECT_ID}-ipfs-staging`
+- **Production**: `${PROJECT_ID}-ipfs-production`
+
+This ensures complete data isolation between environments. Files uploaded to staging are not accessible from production and vice versa.
+
 ## Development
 
 ### Quick Commands
@@ -81,6 +89,9 @@ All uploaded files are content-addressed using IPFS and stored as blocks in your
 ```bash
 # Show all available commands
 make help
+
+# Create GCS buckets for staging and production
+make create-buckets
 
 # Start development environment
 make dev

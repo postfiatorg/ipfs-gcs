@@ -36,26 +36,27 @@ gcloud services list --enabled --filter="name:(container.googleapis.com OR stora
 
 **Note**: If the Google Cloud Console shows errors, use the command line instead. API enablement can take 2-5 minutes to propagate.
 
-### 2. Create GCS Bucket
+### 2. Create GCS Buckets
 
-**🚨 REQUIRED**: Create the GCS bucket that the application will use for IPFS block storage.
+**🚨 REQUIRED**: Create separate GCS buckets for staging and production environments.
 
 ```bash
-# Create bucket (use your project ID as bucket name for uniqueness)
-gsutil mb gs://$GCP_PROJECT_ID-ipfs
+# Create staging bucket
+gsutil mb -l us-central1 gs://$GCP_PROJECT_ID-ipfs-staging
 
-# Or create with specific region for better performance
-gsutil mb -l us-central1 gs://$GCP_PROJECT_ID-ipfs
+# Create production bucket  
+gsutil mb -l us-central1 gs://$GCP_PROJECT_ID-ipfs-production
 
-# Verify bucket exists
-gsutil ls gs://$GCP_PROJECT_ID-ipfs
+# Verify buckets exist
+gsutil ls gs://$GCP_PROJECT_ID-ipfs-staging
+gsutil ls gs://$GCP_PROJECT_ID-ipfs-production
 ```
 
-**Important**: Update the configmap with your actual bucket name:
-```yaml
-# In k8s/configmap.yaml, change:
-bucket-name: "your-project-id-ipfs"  # Replace with actual project ID
-```
+**Note**: The deployment workflow automatically updates the configmap with the correct bucket name based on the environment:
+- Staging: `${PROJECT_ID}-ipfs-staging`
+- Production: `${PROJECT_ID}-ipfs-production`
+
+This ensures complete data isolation between environments.
 
 ### 3. Create GKE Clusters
 
@@ -120,8 +121,11 @@ gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
 
 # Note: If you need to add storage permissions to an existing service account
 # (e.g., github-deployer@PROJECT_ID.iam.gserviceaccount.com), you may also need
-# bucket-specific permissions:
-# gcloud storage buckets add-iam-policy-binding gs://$GCP_PROJECT_ID-ipfs \
+# bucket-specific permissions for both buckets:
+# gcloud storage buckets add-iam-policy-binding gs://$GCP_PROJECT_ID-ipfs-staging \
+#   --member="serviceAccount:github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
+#   --role="roles/storage.objectAdmin"
+# gcloud storage buckets add-iam-policy-binding gs://$GCP_PROJECT_ID-ipfs-production \
 #   --member="serviceAccount:github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
 #   --role="roles/storage.objectAdmin"
 

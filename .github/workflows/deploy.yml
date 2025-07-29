@@ -94,8 +94,12 @@ jobs:
         cd k8s
         sed -i "s|your-registry/ipfs-gcs-example:latest|${{ env.IMAGE }}|g" deployment.yaml
         
-        # Update the bucket name in configmap
-        sed -i "s|ipfs-production|${{ secrets.GCP_PROJECT_ID }}-ipfs|g" configmap.yaml
+        # Update the bucket name in configmap based on environment
+        if [[ "${{ env.ENVIRONMENT }}" == "production" ]]; then
+          sed -i "s|ipfs-production|${{ secrets.GCP_PROJECT_ID }}-ipfs-production|g" configmap.yaml
+        else
+          sed -i "s|ipfs-production|${{ secrets.GCP_PROJECT_ID }}-ipfs-staging|g" configmap.yaml
+        fi
         
         # Apply manifests (skip HPA temporarily to prevent scaling issues)
         kubectl apply -f configmap.yaml -n ${{ env.NAMESPACE }}
