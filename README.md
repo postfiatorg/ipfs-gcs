@@ -105,9 +105,9 @@ make setup-branch-protection
 
 ### Documentation
 
-- [Development Guide](DEVELOPMENT.md) - Local setup, debugging, architecture details
-- [Production Guide](PRODUCTION.md) - Kubernetes deployment, scaling, monitoring
-- [Deployment Guide](DEPLOYMENT.md) - CI/CD setup and deployment workflows
+- [Development Guide](docs/DEVELOPMENT.md) - Local setup, debugging, architecture details
+- [Production Guide](docs/PRODUCTION.md) - Kubernetes deployment, scaling, monitoring
+- [Deployment Guide](docs/DEPLOYMENT.md) - CI/CD setup and deployment workflows
 - [Branch Protection Setup](.github/BRANCH_PROTECTION.md) - Repository security and workflow
 - [Kubernetes Manifests](k8s/README.md) - K8s configuration details
 
