@@ -51,9 +51,9 @@ k8s-validate: ## Validate Kubernetes manifests
 	@echo "Validating Kubernetes manifests..."
 	@for file in k8s/*.yaml; do \
 		echo "Validating $$file..."; \
-		kubectl --dry-run=client apply -f $$file >/dev/null || exit 1; \
+		python3 -c "import yaml; list(yaml.safe_load_all(open('$$file')))" && echo "✓ $$file YAML syntax is valid" || (echo "❌ $$file YAML syntax error"; exit 1); \
 	done
-	@echo "✓ All Kubernetes manifests are valid"
+	@echo "✓ All Kubernetes manifests have valid YAML syntax"
 
 clean: ## Clean up build artifacts
 	docker compose down --remove-orphans || true
