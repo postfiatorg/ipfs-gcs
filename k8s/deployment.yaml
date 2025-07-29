@@ -52,8 +52,10 @@ spec:
           httpGet:
             path: /health
             port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
       volumes:
       - name: google-cloud-key
         secret:
