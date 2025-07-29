@@ -75,6 +75,19 @@ jobs:
     - name: Create namespace if it doesn't exist
       run: |
         kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f - || kubectl create namespace ${{ env.NAMESPACE }}
+    - name: Create GCS credentials secret
+      run: |
+        # Create temporary credentials file from GitHub secret
+        echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcs-key.json
+        
+        # Create or update the secret
+        kubectl create secret generic gcs-key \
+          --from-file=key.json=/tmp/gcs-key.json \
+          --namespace=${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+        
+        # Clean up temp file
+        rm /tmp/gcs-key.json
 
     - name: Deploy to Kubernetes
       run: |
