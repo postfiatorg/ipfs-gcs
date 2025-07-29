@@ -94,6 +94,7 @@ make docker-build docker-test
 
 - [Development Guide](DEVELOPMENT.md) - Local setup, debugging, architecture details
 - [Production Guide](PRODUCTION.md) - Kubernetes deployment, scaling, monitoring
+- [Deployment Guide](DEPLOYMENT.md) - CI/CD setup and deployment workflows
 - [Kubernetes Manifests](k8s/README.md) - K8s configuration details
 
 ## License

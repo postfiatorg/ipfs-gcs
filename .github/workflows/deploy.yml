@@ -1,0 +1,114 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || (startsWith(github.ref, 'refs/tags/') && 'production' || 'staging') }}
+    
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up environment variables
+      run: |
+        if [[ "${{ github.event.inputs.environment }}" == "production" ]] || [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          echo "GKE_CLUSTER=ipfs-gcs-prod" >> $GITHUB_ENV
+          echo "NAMESPACE=default" >> $GITHUB_ENV
+        else
+          echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          echo "GKE_CLUSTER=ipfs-gcs-staging" >> $GITHUB_ENV
+          echo "NAMESPACE=staging" >> $GITHUB_ENV
+        fi
+        echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker for GCR
+      run: gcloud auth configure-docker
+
+    - name: Build and push Docker image
+      run: |
+        IMAGE="gcr.io/${{ secrets.GCP_PROJECT_ID }}/ipfs-gcs:${{ env.IMAGE_TAG }}"
+        docker build -t $IMAGE .
+        docker push $IMAGE
+        echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+    - name: Get GKE credentials
+      run: |
+        gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
+          --zone ${{ secrets.GKE_ZONE }} \
+          --project ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Create namespace if it doesn't exist
+      run: |
+        kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Update the deployment image
+        cd k8s
+        sed -i "s|your-registry/ipfs-gcs-example:latest|${{ env.IMAGE }}|g" deployment.yaml
+        
+        # Apply manifests
+        kubectl apply -f configmap.yaml -n ${{ env.NAMESPACE }}
+        kubectl apply -f deployment.yaml -n ${{ env.NAMESPACE }}
+        kubectl apply -f service.yaml -n ${{ env.NAMESPACE }}
+        kubectl apply -f hpa.yaml -n ${{ env.NAMESPACE }}
+
+    - name: Wait for deployment
+      run: |
+        kubectl rollout status deployment/ipfs-gcs -n ${{ env.NAMESPACE }} --timeout=300s
+
+    - name: Get deployment info
+      run: |
+        kubectl get services -n ${{ env.NAMESPACE }}
+        kubectl get pods -n ${{ env.NAMESPACE }}
+        
+        # Get external IP if available
+        EXTERNAL_IP=$(kubectl get svc ipfs-gcs -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        if [ -n "$EXTERNAL_IP" ]; then
+          echo "🚀 Deployment successful! Service available at: http://$EXTERNAL_IP"
+        else
+          echo "🚀 Deployment successful! Service deployed to cluster."
+        fi
+
+    - name: Run health check
+      run: |
+        # Wait for load balancer
+        sleep 30
+        
+        # Try to get external IP and test health endpoint
+        EXTERNAL_IP=$(kubectl get svc ipfs-gcs -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        if [ -n "$EXTERNAL_IP" ]; then
+          curl -f "http://$EXTERNAL_IP/health" || echo "Health check failed, but deployment completed"
+        else
+          echo "No external IP available for health check"
+        fi

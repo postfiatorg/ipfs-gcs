@@ -60,6 +60,35 @@ clean: ## Clean up build artifacts
 
 ci: install lint security docker-build docker-test ## Run full CI pipeline
 
+# Deployment targets
+deploy-staging: ## Deploy to staging environment (requires GCP setup)
+	@echo "Deploying to staging..."
+	@if [ -z "$(GCP_PROJECT_ID)" ]; then echo "❌ GCP_PROJECT_ID environment variable required"; exit 1; fi
+	@if ! command -v gcloud >/dev/null; then echo "❌ gcloud CLI required"; exit 1; fi
+	@if ! command -v kubectl >/dev/null; then echo "❌ kubectl required"; exit 1; fi
+	@echo "Building image..."
+	docker build -t gcr.io/$(GCP_PROJECT_ID)/ipfs-gcs:staging .
+	docker push gcr.io/$(GCP_PROJECT_ID)/ipfs-gcs:staging
+	@echo "Deploying to staging cluster..."
+	gcloud container clusters get-credentials ipfs-gcs-staging --zone us-central1-a --project $(GCP_PROJECT_ID)
+	kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -
+	cd k8s && sed 's|your-registry/ipfs-gcs-example:latest|gcr.io/$(GCP_PROJECT_ID)/ipfs-gcs:staging|g' deployment.yaml | kubectl apply -f - -n staging
+	kubectl apply -f k8s/configmap.yaml -n staging
+	kubectl apply -f k8s/service.yaml -n staging
+	kubectl rollout status deployment/ipfs-gcs -n staging
+
+deploy-prod: ## Deploy to production environment (requires GCP setup)
+	@echo "⚠️  Deploying to PRODUCTION..."
+	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	@if [ -z "$(GCP_PROJECT_ID)" ]; then echo "❌ GCP_PROJECT_ID environment variable required"; exit 1; fi
+	docker build -t gcr.io/$(GCP_PROJECT_ID)/ipfs-gcs:$(shell git rev-parse --short HEAD) .
+	docker push gcr.io/$(GCP_PROJECT_ID)/ipfs-gcs:$(shell git rev-parse --short HEAD)
+	gcloud container clusters get-credentials ipfs-gcs-prod --zone us-central1-a --project $(GCP_PROJECT_ID)
+	cd k8s && sed 's|your-registry/ipfs-gcs-example:latest|gcr.io/$(GCP_PROJECT_ID)/ipfs-gcs:$(shell git rev-parse --short HEAD)|g' deployment.yaml | kubectl apply -f -
+	kubectl apply -f k8s/configmap.yaml
+	kubectl apply -f k8s/service.yaml
+	kubectl rollout status deployment/ipfs-gcs
+
 # Development targets
 dev: ## Start development environment
 	docker compose up
