@@ -118,6 +118,13 @@ gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
   --member="serviceAccount:github-actions@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/storage.admin"
 
+# Note: If you need to add storage permissions to an existing service account
+# (e.g., github-deployer@PROJECT_ID.iam.gserviceaccount.com), you may also need
+# bucket-specific permissions:
+# gcloud storage buckets add-iam-policy-binding gs://$GCP_PROJECT_ID-ipfs \
+#   --member="serviceAccount:github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
+#   --role="roles/storage.objectAdmin"
+
 # Create and download key
 gcloud iam service-accounts keys create github-actions-key.json \
   --iam-account=github-actions@$GCP_PROJECT_ID.iam.gserviceaccount.com \

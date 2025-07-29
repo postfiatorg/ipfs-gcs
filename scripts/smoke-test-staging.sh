@@ -29,8 +29,8 @@ TEST_FILE=$(mktemp)
 echo "Hello from staging smoke test at $(date)" > "$TEST_FILE"
 
 UPLOAD_RESPONSE=$(curl -s -F "upload=@$TEST_FILE" "$STAGING_URL/upload")
-if echo "$UPLOAD_RESPONSE" | grep -q "ipfs"; then
-    IPFS_HASH=$(echo "$UPLOAD_RESPONSE" | grep -o 'ipfs/[A-Za-z0-9]*' | head -1)
+if echo "$UPLOAD_RESPONSE" | grep -q "hash"; then
+    IPFS_HASH=$(echo "$UPLOAD_RESPONSE" | jq -r .hash)
     echo "✅ File uploaded successfully: $IPFS_HASH"
 else
     echo "❌ File upload failed"
@@ -41,7 +41,7 @@ fi
 
 # Test 3: Download the uploaded file
 echo "🔍 Test 3: File download"
-DOWNLOAD_URL="$STAGING_URL/download/$IPFS_HASH"
+DOWNLOAD_URL="$STAGING_URL/download/ipfs/$IPFS_HASH"
 DOWNLOADED_CONTENT=$(curl -s "$DOWNLOAD_URL")
 
 if [ -n "$DOWNLOADED_CONTENT" ]; then
