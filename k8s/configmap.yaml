@@ -3,4 +3,4 @@ kind: ConfigMap
 metadata:
   name: ipfs-gcs-config
 data:
-  bucket-name: "ipfs-production"  # Change to your production bucket
+  bucket-name: "pf-ipfs-gcs-test-ipfs"  # Staging/production bucket
