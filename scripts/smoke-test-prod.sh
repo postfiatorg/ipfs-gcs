@@ -4,7 +4,7 @@ set -e
 echo "🧪 Running smoke tests for production environment..."
 
 # Get production URL
-PROD_URL=$(bash scripts/get-prod-url.sh | grep "✅ Production URL:" | cut -d' ' -f3)
+PROD_URL=$(bash scripts/get-prod-url.sh | grep "✅ Production URL:" | sed 's/.*: //')
 
 if [ -z "$PROD_URL" ]; then
     echo "❌ Could not get production URL. Is the production environment deployed?"

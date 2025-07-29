@@ -4,7 +4,7 @@ set -e
 echo "🧪 Running smoke tests for staging environment..."
 
 # Get staging URL
-STAGING_URL=$(bash scripts/get-staging-url.sh | grep "✅ Staging URL:" | cut -d' ' -f3)
+STAGING_URL=$(bash scripts/get-staging-url.sh | grep "✅ Staging URL:" | sed 's/.*: //')
 
 if [ -z "$STAGING_URL" ]; then
     echo "❌ Could not get staging URL. Is the staging environment deployed?"

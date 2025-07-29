@@ -36,7 +36,28 @@ gcloud services list --enabled --filter="name:(container.googleapis.com OR stora
 
 **Note**: If the Google Cloud Console shows errors, use the command line instead. API enablement can take 2-5 minutes to propagate.
 
-### 2. Create GKE Clusters
+### 2. Create GCS Bucket
+
+**🚨 REQUIRED**: Create the GCS bucket that the application will use for IPFS block storage.
+
+```bash
+# Create bucket (use your project ID as bucket name for uniqueness)
+gsutil mb gs://$GCP_PROJECT_ID-ipfs
+
+# Or create with specific region for better performance
+gsutil mb -l us-central1 gs://$GCP_PROJECT_ID-ipfs
+
+# Verify bucket exists
+gsutil ls gs://$GCP_PROJECT_ID-ipfs
+```
+
+**Important**: Update the configmap with your actual bucket name:
+```yaml
+# In k8s/configmap.yaml, change:
+bucket-name: "your-project-id-ipfs"  # Replace with actual project ID
+```
+
+### 3. Create GKE Clusters
 
 **🚨 REQUIRED**: You must create these clusters before running any deployments. The GitHub Actions workflows expect them to exist.
 
