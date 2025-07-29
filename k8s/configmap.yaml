@@ -3,4 +3,4 @@ kind: ConfigMap
 metadata:
   name: ipfs-gcs-config
 data:
-  bucket-name: "pf-ipfs-gcs-test-ipfs"  # Staging/production bucket
+  bucket-name: "REPLACE_WITH_BUCKET_NAME"  # Will be replaced during deployment

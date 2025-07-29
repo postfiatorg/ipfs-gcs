@@ -95,6 +95,8 @@ jobs:
         sed -i "s|your-registry/ipfs-gcs-example:latest|${{ env.IMAGE }}|g" deployment.yaml
         
         # Apply manifests (skip HPA temporarily to prevent scaling issues)
+        # Replace bucket name with project-specific value
+        sed -i "s|REPLACE_WITH_BUCKET_NAME|${{ secrets.GCP_PROJECT_ID }}-ipfs|g" configmap.yaml
         kubectl apply -f configmap.yaml -n ${{ env.NAMESPACE }}
         kubectl apply -f deployment.yaml -n ${{ env.NAMESPACE }}
         kubectl apply -f service.yaml -n ${{ env.NAMESPACE }}
