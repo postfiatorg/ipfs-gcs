@@ -1,5 +1,41 @@
-node_modules
+# Dependencies
+node_modules/
 
+# Environment files
 .env
-package-lock.json
+.env.local
+.env.production
+
+# Google Cloud credentials
 serviceAccountKey.json
+*.json
+!package.json
+!package-lock.json
+
+# IPFS local storage
+.ipfs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp

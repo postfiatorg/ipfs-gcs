@@ -1,79 +1,165 @@
-export default (gcs, {
-  ipfsConfig,
-  ipfsRepoLockName,
-  ipfsRepoPath
-}) => new Promise((resolve, reject) => {
-  const Gateway = require('ipfs/src/http')
-  const Repo = require('ipfs-repo')
-  const GCSStore = require('datastore-gcs')
-  const RepoLock = require('./repo-lock')
+import { createHelia } from 'helia'
+import { createLibp2p } from 'libp2p'
+import { noise } from '@chainsafe/libp2p-noise'
+import { yamux } from '@chainsafe/libp2p-yamux'
+import { identify } from '@libp2p/identify'
+import { unixfs } from '@helia/unixfs'
+import { MemoryBlockstore } from 'blockstore-core'
+import { CID } from 'multiformats/cid'
+import { base32 } from 'multiformats/bases/base32'
 
-  const bucketpath = ipfsRepoPath
+// Custom GCS-backed blockstore
+class GCSBlockstore extends MemoryBlockstore {
+  constructor(bucket) {
+    super()
+    this.bucket = bucket
+  }
 
-  // Create our custom lock
-  const store = new GCSStore(bucketpath, { gcs })
-  const repoLock = new RepoLock(store, ipfsRepoLockName)
+  async put(key, val) {
+    // Store in memory first
+    await super.put(key, val)
+    
+    // Then persist to GCS
+    // Convert CID to base32 for filesystem compatibility
+    const cid = CID.decode(key.bytes || key)
+    const keyStr = cid.toString(base32)
+    const file = this.bucket.file(`blocks/${keyStr}`)
+    await file.save(val)
+  }
 
-  // Create the IPFS Repo, full backed by GCS
-  const repo = new Repo(bucketpath, {
-    storageBackends: {
-      root: GCSStore,
-      blocks: GCSStore,
-      keys: GCSStore,
-      datastore: GCSStore
-    },
-    storageBackendOptions: {
-      root: { gcs },
-      blocks: { gcs },
-      keys: { gcs },
-      datastore: { gcs }
-    },
-    lock: repoLock
-  })
-
-  const gateway = new Gateway(
-    repo,
-    ipfsConfig
-  )
-
-  console.log('Starting the gateway...')
-
-  gateway.start(true, (x) => {
-
-    if (x instanceof Error) {
-      return reject(x)
+  async get(key) {
+    try {
+      // Try memory first
+      return await super.get(key)
+    } catch (err) {
+      // Fall back to GCS
+      const cid = CID.decode(key.bytes || key)
+      const keyStr = cid.toString(base32)
+      const file = this.bucket.file(`blocks/${keyStr}`)
+      const [buffer] = await file.download()
+      
+      // Cache in memory
+      await super.put(key, buffer)
+      
+      return buffer
     }
+  }
 
-    console.log('Gateway now running')
+  async has(key) {
+    // Check memory first
+    if (await super.has(key)) {
+      return true
+    }
+    
+    // Check GCS
+    const cid = CID.decode(key.bytes || key)
+    const keyStr = cid.toString(base32)
+    const file = this.bucket.file(`blocks/${keyStr}`)
+    const [exists] = await file.exists()
+    return exists
+  }
+}
 
-    const node = gateway.node
+export default async (gcsBucket, config) => {
+  console.log('Initializing IPFS with GCS blockstore...')
+  
+  const blockstore = new GCSBlockstore(gcsBucket)
 
-    resolve(node)
-
-    node.version()
-      .then((version) => {
-        console.log('Version:', version.version)
-      })
-      // Once we have the version, let's add a file to IPFS
-      .then(() => {
-        return node.files.add({
-          path: 'data.txt',
-          content: Buffer.from(`js_ipfs ${Date.now()}`)
-        })
-      })
-      // Log out the added files metadata and cat the file from IPFS
-      .then((filesAdded) => {
-        console.log('\nAdded file:', filesAdded[0].path, filesAdded[0].hash)
-        return node.files.cat(filesAdded[0].hash)
-      })
-      // Print out the files contents to console
-      .then((data) => {
-        console.log(`\nFetched file content '${data.toString()}', containing ${data.byteLength} bytes`)
-      })
-      // Log out the error, if there is one
-      .catch((err) => {
-        console.log('File Processing Error:', err)
-      })
+  const libp2p = await createLibp2p({
+    addresses: {
+      listen: []  // Don't listen on any addresses
+    },
+    connectionEncrypters: [noise()],
+    streamMuxers: [yamux()],
+    services: {
+      identify: identify()
+    }
   })
 
-})
+  const helia = await createHelia({
+    blockstore,
+    libp2p
+  })
+
+  const fs = unixfs(helia)
+
+  // Create a wrapper to match old IPFS API
+  const ipfsWrapper = {
+    files: {
+      add: async ({ path, content }) => {
+        // Handle both Buffer and Stream
+        let buffer
+        if (Buffer.isBuffer(content)) {
+          buffer = content
+        } else {
+          // Read stream
+          const chunks = []
+          for await (const chunk of content) {
+            chunks.push(chunk)
+          }
+          buffer = Buffer.concat(chunks)
+        }
+        
+        const cid = await fs.addBytes(buffer)
+        return {
+          path: path,
+          hash: cid.toString(),
+          size: buffer.length
+        }
+      },
+      catReadableStream: (ipfspath) => {
+        // Remove /ipfs/ prefix if present
+        const cidStr = ipfspath.replace(/^\/ipfs\//, '')
+        
+        // Return an async generator wrapped as a stream-like object
+        const generator = fs.cat(cidStr)
+        
+        // Create a simple event emitter
+        const stream = {
+          _listeners: {},
+          on(event, handler) {
+            if (!this._listeners[event]) this._listeners[event] = []
+            this._listeners[event].push(handler)
+            return this
+          },
+          emit(event, ...args) {
+            if (this._listeners[event]) {
+              this._listeners[event].forEach(handler => handler(...args))
+            }
+          },
+          async pipe(destination) {
+            try {
+              for await (const chunk of generator) {
+                destination.write(chunk)
+              }
+              destination.end()
+              this.emit('end')
+            } catch (error) {
+              this.emit('error', error)
+            }
+            return destination
+          }
+        }
+        
+        // Start consuming the generator immediately to catch errors
+        setImmediate(async () => {
+          try {
+            // Peek at the first chunk to verify the CID exists
+            const iterator = generator[Symbol.asyncIterator]()
+            const { done } = await iterator.next()
+            if (done) {
+              stream.emit('error', new Error('No such file'))
+            }
+          } catch (error) {
+            stream.emit('error', error)
+          }
+        })
+        
+        return stream
+      }
+    }
+  }
+
+  console.log('IPFS (Helia) node initialized with GCS backend')
+  return ipfsWrapper
+}

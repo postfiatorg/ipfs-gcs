@@ -1,0 +1,20 @@
+# KEDA ScaledObject for scale-to-zero
+# Requires KEDA to be installed: https://keda.sh/docs/2.12/deploy/
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: ipfs-gcs-scaler
+spec:
+  scaleTargetRef:
+    name: ipfs-gcs
+  minReplicaCount: 0  # Scale to zero
+  maxReplicaCount: 20 # Maximum replicas
+  cooldownPeriod: 300 # Wait 5 minutes before scaling to zero
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus:9090
+      metricName: http_requests_per_second
+      threshold: '0.1'  # Scale up if more than 0.1 requests per second
+      query: |
+        sum(rate(http_requests_total{app="ipfs-gcs"}[1m]))

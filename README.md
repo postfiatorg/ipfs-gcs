@@ -1,70 +1,84 @@
 # ipfs-gcs-example
 
-An example of IPFS backed by Google Cloud Storage
+IPFS implementation with Google Cloud Storage backend using Helia, Express.js, and Docker.
 
-express.js, ipfs, gcs, openpgp
+## Features
 
-## Run
+- IPFS file storage using Helia (modern IPFS implementation)
+- Google Cloud Storage as persistent block storage
+- REST API for file upload/download
+- Docker Compose setup for easy deployment
+- Memory cache with GCS fallback for optimal performance
+- Kubernetes-ready for production deployment
 
-Create a `.env` file, see `.env.sample`
+## Quick Start
 
-```env
-NODE_ENV=development
-
-GOOGLE_APPLICATION_CREDENTIALS=serviceAccountKey.json
-
-BUCKET_NAME=ipfs-example
-IPFS_REPO_LOCK_NAME=ipfs-example-20181112
-IPFS_REPO_PATH=/
-
-PORT=3000
-FILE_KEY=<system wide filekey>
-
-```
-
-### Run with container
+### Local Development
 
 ```bash
-docker-compose up
+# Clone the repository
+git clone https://github.com/allenday/ipfs-gcs-example.git
+cd ipfs-gcs-example
+
+# Copy environment variables
+cp .env.example .env
+
+# Add your GCS service account key
+# Edit .env with your bucket name
+
+# Run with Docker Compose
+docker compose up
 ```
 
-### Run locally
+See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development setup.
+
+### Production Deployment
 
 ```bash
-npm i
-npm run dev
+# Quick deploy to Kubernetes
+kubectl create secret generic gcs-key --from-file=key.json=serviceAccountKey.json
+kubectl apply -f k8s/
 ```
 
-## API
+See [PRODUCTION.md](PRODUCTION.md) for detailed production deployment guide.
 
-### upload
+## API Usage
 
+### Upload File
 ```bash
-curl -F "upload=/path/to/file" -X "POST" -i http://localhost:3000/upload
+curl -F "upload=@/path/to/file" -X POST http://localhost:3000/upload
 ```
 
-### download
-
+### Download File
 ```bash
-curl http://localhost:3000/download/ipfs/QmdSEXaUoCAtvFLDZ1DNAjmHJjvXmnHeYFK7R5CWuEu8ZB
+curl http://localhost:3000/download/ipfs/[hash]
 ```
 
-### upload with encryption
-
+### Health Check
 ```bash
-# with default file key
-curl -F "upload=/path/to/file" -X "POST" -i http://localhost:3000/s-upload
-
-# with custom file key
-curl -F "upload=/path/to/file" -X "POST" -i http://localhost:3000/s-upload?fileKey=2609a2251e2a1a934a99539ba54d6e55
+curl http://localhost:3000/health
 ```
 
-### download with encryption
+## Architecture
 
-```bash
-# with default file key
-curl http://localhost:3000/s-download/ipfs/QmX44ww41WYnzApw6rGvgGXwZdM1xnh4wPv7AHtQYqWdK1
+The application uses:
+- **Helia**: Modern IPFS implementation for content addressing
+- **Custom GCS Blockstore**: Stores IPFS blocks in Google Cloud Storage
+- **Express.js**: Lightweight REST API server
+- **Docker**: Containerized deployment
 
-# with custom file key
-curl http://localhost:3000/s-download/ipfs/QmX44ww41WYnzApw6rGvgGXwZdM1xnh4wPv7AHtQYqWdK1?fileKey=2609a2251e2a1a934a99539ba54d6e55
-```
+All uploaded files are content-addressed using IPFS and stored as blocks in your GCS bucket under the `blocks/` prefix.
+
+## Documentation
+
+- [Development Guide](DEVELOPMENT.md) - Local setup, debugging, architecture details
+- [Production Guide](PRODUCTION.md) - Kubernetes deployment, scaling, monitoring
+- [Kubernetes Manifests](k8s/README.md) - K8s configuration details
+
+## License
+
+MIT
+
+---
+
+*Based on original work from [catcatio/ipfs-gcs](https://github.com/catcatio/ipfs-gcs)*

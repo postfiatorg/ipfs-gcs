@@ -1,14 +1,12 @@
 import 'dotenv/config'
-import '@rabbotio/noconsole'
-
-import config from './config'
-import Server from './server'
+import config from './config.js'
+import Server from './server.js'
 
 const server = Server(config)
 
 server.start()
-  .then(() =>console.log(`OK ${Date.now()}`))
+  .then(() => console.log(`Server started at ${Date.now()}`))
   .catch(err => {
-    console.error('main', err.message)
-    console.error('err')
+    console.error('Failed to start server:', err.message)
+    process.exit(1)
   })

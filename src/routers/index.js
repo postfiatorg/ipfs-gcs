@@ -1,5 +1,4 @@
 import { Router } from 'express'
-import AESCrypto from '../AESCrypto'
 import { Duplex } from 'stream'
 
 const bufferToStream = (buffer) => {
@@ -9,78 +8,50 @@ const bufferToStream = (buffer) => {
   return stream
 }
 
-const doUpload = async (ipfs, path, data, fileKey = '') => {
-  console.log('doUpload', path, data, fileKey)
-  let content = bufferToStream(data)
-  if (fileKey) {
-    content = content.pipe(AESCrypto(fileKey).encryptStream())
-  }
-
-  return await ipfs.files.add({
-    path,
-    content
-  })
-}
-
 const upload = (ipfs) => async (req, res) => {
-  const files = req.files
-  const result = await doUpload(ipfs, files.upload.name, files.upload.data)
-  console.log(result)
-  res.json(result)
-}
-
-const supload = (ipfs, defaultFileKey) => async (req, res) => {
-  const files = req.files
-  const fileKey = req.query.fileKey
-  const result = await doUpload(ipfs, files.upload.name, files.upload.data, fileKey || defaultFileKey)
-  console.log(result)
-  res.json(result)
-}
-
-const ipfsDownloadStream = (ipfs, ipfspath) => {
-  return ipfs.files.catReadableStream(ipfspath)
+  try {
+    const files = req.files
+    if (!files || !files.upload) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+    
+    const result = await ipfs.files.add({
+      path: files.upload.name,
+      content: bufferToStream(files.upload.data)
+    })
+    
+    console.log('Upload result:', result)
+    res.json(result)
+  } catch (error) {
+    console.error('Upload error:', error)
+    res.status(500).json({ error: error.message })
+  }
 }
 
 const download = (ipfs) => async (req, res) => {
-  const ipfspath = req.path
-  ipfsDownloadStream(ipfs, ipfspath)
-    .on('error', (err) => {
-      console.log(err)
-      // can be =>  Error: No such file
-      res.status(400).send(err)
-    })
-    .pipe(res)
-}
-
-const sdownload = (ipfs, defaultFileKey) => async (req, res) => {
-  const startTime = Date.now()
-  const ipfspath = req.path
-  const fileKey = req.query.fileKey
-  const aesCrypto = AESCrypto(fileKey || defaultFileKey)
-
   try {
-    const readStream = ipfs.files.catReadableStream(ipfspath)
-    readStream.on('error', (err) => {
-      console.log(err)
-      // can be =>  Error: No such file
-      res.status(400).send(err)
-    })
-      .pipe(aesCrypto.decryptStream())
-      .on('end', () => {
-        console.log('s-download done', Date.now()-startTime)
+    const ipfspath = req.path
+    console.log('Downloading:', ipfspath)
+    
+    ipfs.files.catReadableStream(ipfspath)
+      .on('error', (err) => {
+        console.error('Download error:', err)
+        res.status(404).send(err.message)
       })
       .pipe(res)
   } catch (error) {
-    console.log(error)
+    console.error('Download error:', error)
+    res.status(500).send(error.message)
   }
 }
 
-export default (ipfs, { fileKey }) => {
+export default (ipfs, config) => {
   const router = Router()
-  router.post('/s-upload', supload(ipfs, fileKey))
+  
   router.post('/upload', upload(ipfs))
-  router.use('/s-download', sdownload(ipfs, fileKey))
   router.use('/download', download(ipfs))
-  router.use('/', (req, res) => res.send('ok'))
+  router.get('/health', (req, res) => res.json({ status: 'ok' }))
+  router.use('/', (req, res) => res.send('IPFS-GCS API'))
+  
   return router
 }
