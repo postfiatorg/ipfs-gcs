@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/ci.yml/badge.svg)](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/ci.yml)
 [![Docker](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/docker.yml/badge.svg)](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/docker.yml)
+[![Deploy](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/deploy.yml/badge.svg)](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 IPFS implementation with Google Cloud Storage backend using Helia, Express.js, and Docker.
 
@@ -88,6 +90,14 @@ make ci
 
 # Build and test Docker image
 make docker-build docker-test
+
+# Get deployed environment URLs
+make get-staging-url
+make get-prod-url
+
+# Run smoke tests against deployed environments
+make smoke-test-staging
+make smoke-test-prod
 
 # Set up branch protection (one-time setup)
 make setup-branch-protection
