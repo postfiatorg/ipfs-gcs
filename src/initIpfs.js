@@ -129,12 +129,16 @@ export default async (gcsBucket, config) => {
           },
           async pipe(destination) {
             try {
+              const chunks = []
               for await (const chunk of generator) {
-                destination.write(chunk)
+                chunks.push(chunk)
               }
+              const buffer = Buffer.concat(chunks)
+              destination.write(buffer)
               destination.end()
               this.emit('end')
             } catch (error) {
+              console.error('IPFS download error:', error)
               this.emit('error', error)
             }
             return destination
@@ -144,14 +148,11 @@ export default async (gcsBucket, config) => {
         // Start consuming the generator immediately to catch errors
         setImmediate(async () => {
           try {
-            // Peek at the first chunk to verify the CID exists
-            const iterator = generator[Symbol.asyncIterator]()
-            const { done } = await iterator.next()
-            if (done) {
-              stream.emit('error', new Error('No such file'))
-            }
+            // Test that the CID is valid by checking if we can parse it
+            const CID = await import('multiformats/cid').then(m => m.CID)
+            CID.parse(cidStr)
           } catch (error) {
-            stream.emit('error', error)
+            stream.emit('error', new Error(`Invalid CID: ${cidStr}`))
           }
         })
         
