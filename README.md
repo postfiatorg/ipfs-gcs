@@ -88,6 +88,9 @@ make ci
 
 # Build and test Docker image
 make docker-build docker-test
+
+# Set up branch protection (one-time setup)
+make setup-branch-protection
 ```
 
 ### Documentation
@@ -95,6 +98,7 @@ make docker-build docker-test
 - [Development Guide](DEVELOPMENT.md) - Local setup, debugging, architecture details
 - [Production Guide](PRODUCTION.md) - Kubernetes deployment, scaling, monitoring
 - [Deployment Guide](DEPLOYMENT.md) - CI/CD setup and deployment workflows
+- [Branch Protection Setup](.github/BRANCH_PROTECTION.md) - Repository security and workflow
 - [Kubernetes Manifests](k8s/README.md) - K8s configuration details
 
 ## License

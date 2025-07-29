@@ -98,3 +98,7 @@ dev-build: ## Rebuild and start development environment
 
 logs: ## Show application logs
 	docker compose logs -f
+
+# Repository management
+setup-branch-protection: ## Set up branch protection for main branch (requires GitHub CLI)
+	@./scripts/setup-branch-protection.sh
