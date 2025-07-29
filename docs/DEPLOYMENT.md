@@ -249,6 +249,11 @@ kubectl rollout history deployment/ipfs-gcs -n staging
 4. **Deployment Timeout**
    - Check pod logs for application errors
    - Verify resource requests/limits
+   - Ensure GCS credentials secret exists
+
+5. **Missing GCS Secret**
+   - The deployment requires a `gcs-key` secret with service account credentials
+   - GitHub Actions should create this automatically from `GCP_SA_KEY` secret
 
 ### Debug Commands
 
@@ -259,6 +264,13 @@ kubectl rollout history deployment/ipfs-gcs -n staging
 kubectl describe deployment ipfs-gcs -n staging
 kubectl logs -l app=ipfs-gcs -n staging --tail=50
 kubectl get events -n staging --sort-by='.lastTimestamp'
+
+# Check if secrets exist
+kubectl get secrets -n staging
+kubectl describe secret gcs-key -n staging
+
+# Debug pod startup issues
+kubectl describe pods -l app=ipfs-gcs -n staging
 ```
 
 ## Advanced Features
