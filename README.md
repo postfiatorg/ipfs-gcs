@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/ci.yml/badge.svg)](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/ci.yml)
 [![Docker](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/docker.yml/badge.svg)](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/docker.yml)
+[![Deploy](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/deploy.yml/badge.svg)](https://github.com/postfiatorg/ipfs-gcs/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 IPFS implementation with Google Cloud Storage backend using Helia, Express.js, and Docker.
 
